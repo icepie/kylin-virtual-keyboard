@@ -24,7 +24,7 @@
 
 enum class DesktopType { X11, WAYLAND, UNKNOWN };
 
-enum class DesktopEnvironment { GNOME, KDE, UKUI, UNKNOWN };
+enum class DesktopEnvironment { GNOME, KDE, UKUI, SWAY, UNKNOWN };
 
 static std::string toLower(const char *str) {
     if (str == nullptr) {
@@ -69,6 +69,8 @@ static inline DesktopEnvironment getDesktopEnvironment() {
             return DesktopEnvironment::GNOME;
         } else if (name == "ukui") {
             return DesktopEnvironment::UKUI;
+        } else if (name == "sway") {
+            return DesktopEnvironment::SWAY;
         }
     }
 
@@ -84,4 +86,17 @@ static inline DesktopType getDesktopType() {
     }
 
     return DesktopType::UNKNOWN;
+}
+
+/**
+ * @brief 判断当前是否运行在基于 wlroots 的 Wayland 合成器上
+ *        包括 Sway 以及其他非 UKUI/KDE/GNOME 的 Wayland 环境
+ */
+static inline bool isWlrootsWayland() {
+    if (getDesktopType() != DesktopType::WAYLAND) {
+        return false;
+    }
+    auto env = getDesktopEnvironment();
+    return env == DesktopEnvironment::SWAY ||
+           env == DesktopEnvironment::UNKNOWN;
 }

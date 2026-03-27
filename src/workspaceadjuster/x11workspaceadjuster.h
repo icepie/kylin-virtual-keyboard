@@ -45,11 +45,11 @@ private:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 class X11Kf6WorkspaceAdjuster : public WorkspaceAdjuster {
 public:
-    X11Kf6WorkspaceAdjuster() override = default;
-    ~X11Kf6WorkspaceAdjuster();
+    X11Kf6WorkspaceAdjuster();
+    ~X11Kf6WorkspaceAdjuster() override = default;
 
-    void raiseInputArea(const QRect &rect);
-    void fallInputArea();
+    void raiseInputArea(QWindow *window, const QRect &rect) override;
+    void fallInputArea() override;
 
 private:
     void connectSignal();

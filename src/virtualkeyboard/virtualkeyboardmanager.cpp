@@ -31,6 +31,7 @@
 #include "virtualkeyboardstrategy.h"
 #include "workspaceadjuster/waylandworkspaceadjuster.h"
 #include "workspaceadjuster/x11workspaceadjuster.h"
+#include "workspaceadjuster/layershellworkspaceadjuster.h"
 
 VirtualKeyboardManager::VirtualKeyboardManager(
     HideVirtualKeyboardCallback hideVirtualKeyboardCallback)
@@ -135,8 +136,13 @@ void VirtualKeyboardManager::notifyIMListChanged() {
 void VirtualKeyboardManager::initWorkspaceAdjuster() {
     if (getDesktopEnvironment() == DesktopEnvironment::UKUI &&
         getDesktopType() == DesktopType::WAYLAND) {
+        // UKUI Wayland：使用 UKUI 私有 Wayland 协议
         workspaceAdjuster_.reset(new WaylandWlcomWorkspaceAdjuster());
+    } else if (isWlrootsWayland()) {
+        // Sway / 其他 wlroots 合成器：使用 wlr-layer-shell 协议
+        workspaceAdjuster_.reset(new LayerShellWorkspaceAdjuster());
     } else {
+        // X11 环境回退
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         workspaceAdjuster_.reset(new X11Kf6WorkspaceAdjuster());
 #else

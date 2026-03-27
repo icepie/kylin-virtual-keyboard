@@ -40,6 +40,7 @@ set(HEADERS
     messagehandler.h
     commandlinehandler.h
     errorhandler.h
+    workspaceadjuster/layershellworkspaceadjuster.h
 )
 
 set(SOURCES
@@ -75,6 +76,7 @@ set(SOURCES
     virtualkeyboardsettings/virtualkeyboardsettings.cpp
     workspaceadjuster/x11workspaceadjuster.cpp
     workspaceadjuster/waylandworkspaceadjuster.cpp
+    workspaceadjuster/layershellworkspaceadjuster.cpp
     log.cpp
     messagehandler.cpp
     commandlinehandler.cpp
@@ -98,6 +100,10 @@ target_link_libraries(${PROJECT_NAME}
             )
 if (QT_VERSION_MAJOR EQUAL 6)
         target_link_libraries(${PROJECT_NAME} Qt${QT_VERSION_MAJOR}::Core5Compat)
+endif()
+
+if (ENABLE_LAYER_SHELL AND LayerShellQt_FOUND)
+    target_link_libraries(${PROJECT_NAME} LayerShellQt::Interface)
 endif()
 
 install(TARGETS ${PROJECT_NAME}  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)

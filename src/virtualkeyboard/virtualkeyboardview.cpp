@@ -26,6 +26,10 @@
 #include "utils.h"
 #include "virtualkeyboardsettings/virtualkeyboardsettings.h"
 
+#ifdef HAVE_LAYER_SHELL
+#include <LayerShellQt/Window>
+#endif
+
 VirtualKeyboardView::VirtualKeyboardView(
     QObject &manager, QObject &model,
     std::unique_ptr<PlacementModeManager> placementModeManager,
@@ -173,6 +177,7 @@ void VirtualKeyboardView::initView() {
 
     if (getDesktopEnvironment() == DesktopEnvironment::UKUI &&
         getDesktopType() == DesktopType::WAYLAND) {
+        // UKUI Wayland：使用 UKUI 私有 Wayland 扩展属性
         view_->setProperty(UkuiWaylandProperty::SURFACE_ROLE,
                            UkuiWaylandProperty::Role::INPUT_PANEL);
         UkuiWindowStates defaultState = UkuiWindowState::Movable;
@@ -184,7 +189,41 @@ void VirtualKeyboardView::initView() {
         QPair<QRegion, int> blurPair(QRegion(), 0);
         view_->setProperty(UkuiWaylandProperty::SURFACE_BLUR,
                            QVariant::fromValue(blurPair));
+    } else if (isWlrootsWayland()) {
+        // Sway / wlroots：使用 wlr-layer-shell 协议
+        // 窗口需要在 show() 之前完成 layer-shell 配置
+#ifdef HAVE_LAYER_SHELL
+        auto *layerWindow = LayerShellQt::Window::get(view_.get());
+        if (layerWindow) {
+            // 置于所有普通窗口之上
+            layerWindow->setLayer(LayerShellQt::Window::LayerTop);
+            // 锚定到屏幕底部，左右延伸撑满
+            // 显式构造 Anchors（QFlags）避免 operator| 返回 int 的类型歧义
+            LayerShellQt::Window::Anchors anchors(LayerShellQt::Window::AnchorBottom);
+            anchors |= LayerShellQt::Window::AnchorLeft;
+            anchors |= LayerShellQt::Window::AnchorRight;
+            layerWindow->setAnchors(anchors);
+            // 初始不占用 exclusive zone，显示时由 WorkspaceAdjuster 设置
+            layerWindow->setExclusiveZone(0);
+            // 不抢占键盘焦点，保持输入法焦点在目标应用
+            layerWindow->setKeyboardInteractivity(
+                LayerShellQt::Window::KeyboardInteractivityNone);
+            KVKBD_INFO("layer-shell window configured for wlroots compositor.");
+        } else {
+            KVKBD_WARN("failed to get LayerShellQt::Window, falling back to basic flags.");
+            view_->setFlags(Qt::Window | Qt::WindowDoesNotAcceptFocus |
+                            Qt::FramelessWindowHint);
+        }
+#else
+        // 未编译 layer-shell 支持时的回退方案
+        // 需要在启动前设置环境变量:
+        // QT_WAYLAND_SHELL_INTEGRATION=zwlr-layer-shell
+        KVKBD_WARN("built without LayerShellQt, using basic Wayland window flags.");
+        view_->setFlags(Qt::Window | Qt::WindowDoesNotAcceptFocus |
+                        Qt::FramelessWindowHint);
+#endif
     } else {
+        // X11 环境
         view_->setFlags(Qt::Window | Qt::WindowDoesNotAcceptFocus |
                         Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint |
                         Qt::BypassWindowManagerHint);
@@ -202,9 +241,9 @@ void VirtualKeyboardView::pressed() {
     if (view_ == nullptr) {
         return;
     }
-    if (getDesktopEnvironment() == DesktopEnvironment::UKUI &&
-        getDesktopType() == DesktopType::WAYLAND) {
-        KVKBD_DEBUG("moveStart");
+    // UKUI Wayland 和 wlroots（Sway）均使用系统级拖动
+    if (getDesktopType() == DesktopType::WAYLAND) {
+        KVKBD_DEBUG("moveStart (Wayland)");
         view_->startSystemMove();
     }
 }

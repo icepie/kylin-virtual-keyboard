@@ -4,6 +4,7 @@ project(kylin-virtual-keyboard LANGUAGES CXX)
 
 OPTION(ENABLE_TEST "Build Test" OFF)
 OPTION(ENABLE_QT6 "Build with Qt6 " OFF)
+OPTION(ENABLE_LAYER_SHELL "Build with layer-shell support for Sway/wlroots compositors" ON)
 
 # set something
 set(CMAKE_AUTOMOC ON)
@@ -45,9 +46,29 @@ endif()
 
 find_package(PkgConfig REQUIRED)
 if (QT_VERSION_MAJOR EQUAL 6)
-    pkg_check_modules(GSettings_QT REQUIRED IMPORTED_TARGET gsettings-qt${QT_VERSION_MAJOR})
+    # Qt6: 先尝试 gsettings-qt6，再回退到 gsettings-qt（可能为 Qt5 版本）
+    pkg_check_modules(GSettings_QT QUIET IMPORTED_TARGET gsettings-qt6)
+    if (NOT GSettings_QT_FOUND)
+        pkg_check_modules(GSettings_QT REQUIRED IMPORTED_TARGET gsettings-qt)
+    endif()
 else()
     pkg_check_modules(GSettings_QT REQUIRED IMPORTED_TARGET gsettings-qt)
+endif()
+
+if (ENABLE_LAYER_SHELL)
+    # LayerShellQt 仅支持 Qt6；Qt5 构建时跳过
+    if (QT_VERSION_MAJOR EQUAL 6)
+        find_package(LayerShellQt QUIET)
+        if (LayerShellQt_FOUND)
+            message(STATUS "LayerShellQt found, enabling layer-shell support for Sway/wlroots.")
+            add_compile_definitions(HAVE_LAYER_SHELL)
+        else()
+            message(WARNING "LayerShellQt not found. layer-shell support disabled.\n"
+                            "Run: sudo pacman -S layer-shell-qt")
+        endif()
+    else()
+        message(STATUS "layer-shell support requires Qt6. Build with -DENABLE_QT6=ON to enable.")
+    endif()
 endif()
 
 include(GNUInstallDirs)

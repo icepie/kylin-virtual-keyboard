@@ -41,10 +41,13 @@ enum class UkuiWindowState : uint32_t {
 Q_DECLARE_FLAGS(UkuiWindowStates, UkuiWindowState)
 Q_DECLARE_OPERATORS_FOR_FLAGS(UkuiWindowStates)
 
+// Qt6 中 Q_DECLARE_OPERATORS_FOR_FLAGS 已生成 constexpr operator&，重复定义会导致歧义
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 inline UkuiWindowState operator&(UkuiWindowState lhs, UkuiWindowState rhs) {
     return static_cast<UkuiWindowState>(static_cast<uint32_t>(lhs) &
                                         static_cast<uint32_t>(rhs));
 }
+#endif
 
 inline UkuiWindowState operator~(UkuiWindowState rhs) {
     return static_cast<UkuiWindowState>(~static_cast<uint32_t>(rhs));
