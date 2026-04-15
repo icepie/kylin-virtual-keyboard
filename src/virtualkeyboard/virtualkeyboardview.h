@@ -111,6 +111,9 @@ private:
     int getContentHeight();
     int getContentWidth();
     void setViewOpacity();
+    Qt::WindowFlags getWaylandFallbackWindowFlags() const;
+    bool shouldForceRaiseWindow() const;
+    void raiseWindowIfNecessary();
 
     void updateCurrentState(std::shared_ptr<State> newState);
     void enterVisibleState();

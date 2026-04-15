@@ -211,17 +211,18 @@ void VirtualKeyboardView::initView() {
             KVKBD_INFO("layer-shell window configured for wlroots compositor.");
         } else {
             KVKBD_WARN("failed to get LayerShellQt::Window, falling back to basic flags.");
-            view_->setFlags(Qt::Window | Qt::WindowDoesNotAcceptFocus |
-                            Qt::FramelessWindowHint);
+            view_->setFlags(getWaylandFallbackWindowFlags());
         }
 #else
         // 未编译 layer-shell 支持时的回退方案
         // 需要在启动前设置环境变量:
         // QT_WAYLAND_SHELL_INTEGRATION=zwlr-layer-shell
         KVKBD_WARN("built without LayerShellQt, using basic Wayland window flags.");
-        view_->setFlags(Qt::Window | Qt::WindowDoesNotAcceptFocus |
-                        Qt::FramelessWindowHint);
+        view_->setFlags(getWaylandFallbackWindowFlags());
 #endif
+    } else if (getDesktopType() == DesktopType::WAYLAND) {
+        // 其他 Wayland 合成器回退到普通窗口提示；Wayland 下不能复用 X11 的 bypass 语义。
+        view_->setFlags(getWaylandFallbackWindowFlags());
     } else {
         // X11 环境
         view_->setFlags(Qt::Window | Qt::WindowDoesNotAcceptFocus |
@@ -241,11 +242,38 @@ void VirtualKeyboardView::pressed() {
     if (view_ == nullptr) {
         return;
     }
+    raiseWindowIfNecessary();
     // UKUI Wayland 和 wlroots（Sway）均使用系统级拖动
     if (getDesktopType() == DesktopType::WAYLAND) {
         KVKBD_DEBUG("moveStart (Wayland)");
         view_->startSystemMove();
     }
+}
+
+Qt::WindowFlags VirtualKeyboardView::getWaylandFallbackWindowFlags() const {
+    return Qt::Window | Qt::Tool | Qt::WindowDoesNotAcceptFocus |
+           Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint;
+}
+
+bool VirtualKeyboardView::shouldForceRaiseWindow() const {
+    if (view_ == nullptr) {
+        return false;
+    }
+
+    if (getDesktopEnvironment() == DesktopEnvironment::UKUI &&
+        getDesktopType() == DesktopType::WAYLAND) {
+        return false;
+    }
+
+    return getDesktopType() != DesktopType::X11;
+}
+
+void VirtualKeyboardView::raiseWindowIfNecessary() {
+    if (!shouldForceRaiseWindow()) {
+        return;
+    }
+
+    view_->raise();
 }
 
 QRect VirtualKeyboardView::calculateInitialGeometry() {

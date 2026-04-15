@@ -160,6 +160,8 @@ void VirtualKeyboardView::updateCurrentState(std::shared_ptr<State> newState) {
 void VirtualKeyboardView::enterVisibleState() {
     updateCurrentState(visibleState_);
 
+    raiseWindowIfNecessary();
+
     if (!isFloatMode()) {
         emit raiseAppRequested();
     }
