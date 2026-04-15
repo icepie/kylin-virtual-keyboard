@@ -33,7 +33,7 @@ private:
     QRect getScreenGeometry() const override;
 
 private:
-    constexpr static float viewHeightRatio_ = 512.0 / 1620.0;
+    constexpr static float viewHeightRatio_ = 640.0 / 1620.0;
 };
 
 #endif // EXPANSIONGEOMETRYMANAGER_H

@@ -26,6 +26,7 @@
 
 #include "geometrymanager/floatgeometrymanager.h"
 #include "geometrymanager/geometrymanager.h"
+#include "log.h"
 #include "screenwatcher.h"
 #include "themewatcher.h"
 #include "virtualkeyboardentry/floatbuttonstrategy.h"
@@ -84,6 +85,7 @@ void FloatButtonManager::initInternalSignalConnections() {
 }
 
 void FloatButtonManager::initFloatButton() {
+    KVKBD_INFO("init float button.");
     fcitxVirtualKeyboardService_.hideVirtualKeyboard();
 
     createFloatButton();
@@ -91,12 +93,14 @@ void FloatButtonManager::initFloatButton() {
     connectFloatButtonSignals();
 
     geometryManager_->updateGeometry();
+    showFloatButton();
 }
 
 void FloatButtonManager::destroyFloatButton() {
     if (floatButton_ == nullptr) {
         return;
     }
+    KVKBD_INFO("destroy float button.");
 
     // 销毁之前必须隐藏，否则会导致虚拟键盘进程
     // 直接退出
@@ -130,6 +134,7 @@ void FloatButtonManager::onViewMoved(int x, int y) {
     if (!floatButton_) {
         return;
     }
+    KVKBD_INFO("float button move to:{},{}", x, y);
     floatButton_->move(x, y);
     ScreenWatcher::getInstance().markScreen(QPoint(x, y));
 }
@@ -138,33 +143,43 @@ void FloatButtonManager::onViewResized(int width, int height) {
     if (!floatButton_) {
         return;
     }
-    KVKBD_DEBUG("onViewResized");
+    KVKBD_INFO("float button resize to:{}x{}", width, height);
     floatButton_->resize(width, height);
     ScreenWatcher::getInstance().notifyScreenMarkChanged();
 }
 
+void FloatButtonManager::onVirtualKeyboardVisibilityChanged(bool visible) {
+    if (visible) {
+        hideFloatButton();
+    } else {
+        showFloatButton();
+    }
+}
+
 void FloatButtonManager::showFloatButton() {
-    if (!floatButtonEnabled_) {
+    if (!floatButtonEnabled_ || floatButton_ == nullptr) {
         return;
     }
 
-    floatButton_->show();
     geometryManager_->updateGeometry();
+    floatButton_->show();
+    floatButton_->raise();
+    KVKBD_INFO("float button shown.");
 }
 
 void FloatButtonManager::hideFloatButton() {
-    if (!floatButtonEnabled_) {
+    if (!floatButtonEnabled_ || floatButton_ == nullptr) {
         return;
     }
 
     floatButton_->hide();
+    KVKBD_INFO("float button hidden.");
 }
 
 void FloatButtonManager::createFloatButton() {
     floatButton_.reset(new FloatButton(
         [this]() { fcitxVirtualKeyboardService_.showVirtualKeyboard(); }));
     floatButton_->updateThemeStyle(themeWatcher_.currentThemeColor());
-    floatButton_->show();
 }
 
 void FloatButtonManager::connectFloatButtonSignals() {
@@ -186,18 +201,12 @@ void FloatButtonManager::connectFloatButtonSignals() {
     connect(
         &virtualKeyboardManager_,
         &VirtualKeyboardManager::virtualKeyboardVisibiltyChanged,
-        floatButton_.get(),
-        [this](bool visible) {
-            if (visible) {
-                hideFloatButton();
-            } else {
-                showFloatButton();
-            }
-        },
+        this, &FloatButtonManager::onVirtualKeyboardVisibilityChanged,
         Qt::UniqueConnection);
 }
 
 void FloatButtonManager::updateFloatButtonEnabled(bool enabled) {
+    KVKBD_INFO("update float button enabled:{}.", enabled);
     floatButtonEnabled_ = enabled;
 
     if (floatButtonEnabled_) {
@@ -212,5 +221,6 @@ void FloatButtonManager::setFloatButtonEnabled(bool enabled) {
         return;
     }
 
+    KVKBD_INFO("set float button enabled:{}.", enabled);
     updateFloatButtonEnabled(enabled);
 }

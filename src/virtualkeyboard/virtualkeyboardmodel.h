@@ -78,6 +78,13 @@ private slots:
     void backendServiceUnregistered(const QString &serviceName);
 
 private:
+    bool shouldUseDirectWaylandInput(int keysym, int state,
+                                     bool isRelease) const;
+    bool sendWaylandInput(int keysym) const;
+    bool shouldBypassFcitxForWaylandTextInput() const;
+    static QString keysymToWaylandText(int keysym);
+    static QString keysymToWaylandKeyName(int keysym);
+
     void initFcitx5Controller();
     void initUkuiMenuServiceProxy();
     void initDBusServiceWatcher();

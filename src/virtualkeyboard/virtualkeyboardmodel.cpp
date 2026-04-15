@@ -17,10 +17,12 @@
 
 #include "virtualkeyboardmodel.h"
 
+#include <QProcess>
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QDBusPendingReply>
 #include "log.h"
+#include "utils.h"
 
 VirtualKeyboardModel::VirtualKeyboardModel(QObject *parent) : QObject(parent) {
     initFcitx5Controller();
@@ -51,9 +53,112 @@ void VirtualKeyboardModel::processKeyEvent(int keysym, int keycode, int state,
         return;
     }
 
+    if (shouldUseDirectWaylandInput(keysym, state, isRelease) &&
+        sendWaylandInput(keysym)) {
+        return;
+    }
+
     virtualKeyboardBackendInterface_->asyncCall("ProcessKeyEvent", (uint)keysym,
                                                 (uint)keycode, (uint)state,
                                                 isRelease, (uint)time);
+}
+
+bool VirtualKeyboardModel::shouldUseDirectWaylandInput(int keysym, int state,
+                                                       bool isRelease) const {
+    if (isRelease || !isWlrootsWayland() ||
+        !shouldBypassFcitxForWaylandTextInput()) {
+        return false;
+    }
+
+    switch (state) {
+    case 0:
+    case 1:
+    case 2:
+        break;
+    default:
+        return false;
+    }
+
+    return !keysymToWaylandText(keysym).isEmpty() ||
+           !keysymToWaylandKeyName(keysym).isEmpty();
+}
+
+bool VirtualKeyboardModel::shouldBypassFcitxForWaylandTextInput() const {
+    // 仅在纯英文键盘输入法下绕过 fcitx5，避免拼音等输入法拿不到预编辑。
+    return uniqueName_.isEmpty() || uniqueName_ == QStringLiteral("keyboard-us");
+}
+
+bool VirtualKeyboardModel::sendWaylandInput(int keysym) const {
+    const QString text = keysymToWaylandText(keysym);
+    QStringList arguments;
+
+    if (!text.isEmpty()) {
+        arguments << text;
+    } else {
+        const QString keyName = keysymToWaylandKeyName(keysym);
+        if (keyName.isEmpty()) {
+            return false;
+        }
+        arguments << QStringLiteral("-k") << keyName;
+    }
+
+    const int exitCode = QProcess::execute("wtype", arguments);
+    if (exitCode != 0) {
+        KVKBD_WARN("wtype failed with exit code:{}, keysym:{}",
+                   exitCode, keysym);
+        return false;
+    }
+
+    if (!text.isEmpty()) {
+        KVKBD_INFO("wtype text input success:{}", text.toStdString());
+    } else {
+        KVKBD_INFO("wtype key input success:{}", keysymToWaylandKeyName(keysym).toStdString());
+    }
+    return true;
+}
+
+QString VirtualKeyboardModel::keysymToWaylandText(int keysym) {
+    switch (keysym) {
+    case 0x0020:
+        return QStringLiteral(" ");
+    case 0x000d:
+        return QStringLiteral("\n");
+    case 0x0009:
+        return QStringLiteral("\t");
+    default:
+        break;
+    }
+
+    if (keysym >= 0x20 && keysym <= 0x7e) {
+        return QString(QChar(keysym));
+    }
+
+    return QString();
+}
+
+QString VirtualKeyboardModel::keysymToWaylandKeyName(int keysym) {
+    switch (keysym) {
+    case 0xff08:
+        return QStringLiteral("BackSpace");
+    case 0xff09:
+        return QStringLiteral("Tab");
+    case 0xff0d:
+        return QStringLiteral("Return");
+    case 0xff1b:
+        return QStringLiteral("Escape");
+    case 0xff51:
+        return QStringLiteral("Left");
+    case 0xff52:
+        return QStringLiteral("Up");
+    case 0xff53:
+        return QStringLiteral("Right");
+    case 0xff54:
+        return QStringLiteral("Down");
+    case 0xffff:
+        return QStringLiteral("Delete");
+    default:
+        return QString();
+    }
 }
 
 void VirtualKeyboardModel::initFcitx5Controller() {

@@ -116,6 +116,11 @@ QPoint FloatGeometryManager::calculateNormalizedPosition(
 }
 
 QPoint FloatGeometryManager::calculateCurrentPosition() const {
+    if (GeometryManager::currentPosition_.x() == defaultCoordinate ||
+        GeometryManager::currentPosition_.y() == defaultCoordinate) {
+        return calculateNormalizedPosition(
+            calculatePositionFromRatio(leftMarginRatio_, topMarginRatio_));
+    }
     return calculatePositionFromRatio(leftMarginRatio_, topMarginRatio_);
 }
 

@@ -22,10 +22,14 @@
 #include <memory>
 
 #include <QMouseEvent>
+#include <QEvent>
 #include <QPaintEvent>
 #include <QPushButton>
 #include <QSize>
 #include <QTimer>
+#include <QIcon>
+#include <QShowEvent>
+#include <QHideEvent>
 
 /**
  * Used to manage the entrance section of the Kylin Virtual Keyboard float
@@ -57,10 +61,13 @@ public slots:
     void resize(int width, int height);
 
 protected:
+    bool event(QEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
 
 private:
     bool shouldPerformMouseClick() const;
@@ -85,6 +92,12 @@ private:
 
     int manhattonLength = 0;
     constexpr static int manhattonLengthThreshold = 10;
+    bool hovered_ = false;
+    bool pressed_ = false;
+
+    QIcon defaultIcon_;
+    QIcon hoveredIcon_;
+    QIcon pressedIcon_;
 
     MouseClickedCallback mouseClickedCallback_;
     std::unique_ptr<QTimer> clickTimer_ = nullptr;

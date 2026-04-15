@@ -51,7 +51,7 @@ private:
         return std::max(screenGeo.width(), screenGeo.height());
     }
 
-    float getViewHeightRatio() const override { return 548.0 / 1620.0; }
+    float getViewHeightRatio() const override { return 680.0 / 1620.0; }
 
 private:
     static constexpr float defaultRightMarginRatio_ = 0.25f;

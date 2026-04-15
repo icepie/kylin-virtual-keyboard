@@ -23,6 +23,7 @@
 #include <QObject>
 #include <QQuickView>
 #include <QString>
+#include <QMargins>
 
 #include "animation/animator.h"
 #include "geometrymanager/expansiongeometrymanager.h"
@@ -114,6 +115,7 @@ private:
     Qt::WindowFlags getWaylandFallbackWindowFlags() const;
     bool shouldForceRaiseWindow() const;
     void raiseWindowIfNecessary();
+    void updateWlrootsLayerShellPlacement();
 
     void updateCurrentState(std::shared_ptr<State> newState);
     void enterVisibleState();

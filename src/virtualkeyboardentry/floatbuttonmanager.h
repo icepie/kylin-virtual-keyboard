@@ -61,6 +61,7 @@ signals:
 private slots:
     void initFloatButton();
     void destroyFloatButton();
+    void onVirtualKeyboardVisibilityChanged(bool visible);
 
     void onScreenResolutionChanged();
     void onMarkedScreenChanged();

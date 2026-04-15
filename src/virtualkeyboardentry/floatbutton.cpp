@@ -18,9 +18,13 @@
 #include "floatbutton.h"
 
 #include <QBitmap>
+#include <QCursor>
+#include <QEnterEvent>
 #include <QPainter>
 #include <QVariant>
 #include <QWindow>
+#include <QShowEvent>
+#include <QHideEvent>
 #include "log.h"
 #include "ukuiwaylandhelper/ukuiwaylandproperties.h"
 #include "utils.h"
@@ -28,6 +32,24 @@
 FloatButton::FloatButton(MouseClickedCallback mouseClickedCallback)
     : mouseClickedCallback_(std::move(mouseClickedCallback)) {
     initAttributes();
+}
+
+bool FloatButton::event(QEvent *event) {
+    switch (event->type()) {
+    case QEvent::Enter:
+        hovered_ = true;
+        update();
+        break;
+    case QEvent::Leave:
+        hovered_ = false;
+        pressed_ = false;
+        update();
+        break;
+    default:
+        break;
+    }
+
+    return QPushButton::event(event);
 }
 
 void FloatButton::move(int x, int y) {
@@ -41,8 +63,22 @@ void FloatButton::resize(int width, int height) {
     QPushButton::resize(width, height);
 }
 
+void FloatButton::showEvent(QShowEvent *event) {
+    KVKBD_INFO("float button show event, pos:{},{} size:{}x{}", x(), y(),
+               width(), height());
+    QPushButton::showEvent(event);
+}
+
+void FloatButton::hideEvent(QHideEvent *event) {
+    KVKBD_INFO("float button hide event, pos:{},{} size:{}x{}", x(), y(),
+               width(), height());
+    QPushButton::hideEvent(event);
+}
+
 void FloatButton::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
+        pressed_ = true;
+        update();
         startX_ = event->pos().x();
         startY_ = event->pos().y();
         emit mousePressed();
@@ -68,6 +104,9 @@ void FloatButton::processMouseReleaseEvent() {
     emit mouseReleased(windowHandle()->position());
 
     manhattonLength = 0;
+    pressed_ = false;
+    hovered_ = rect().contains(mapFromGlobal(QCursor::pos()));
+    update();
 
     startX_ = -1;
     startY_ = -1;
@@ -88,10 +127,14 @@ void FloatButton::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() != Qt::LeftButton) {
         return;
     }
+
     bool couldPerformMouseClick = shouldPerformMouseClick();
     stopClickTimer();
 
     if (couldPerformMouseClick) {
+        pressed_ = false;
+        hovered_ = rect().contains(event->pos());
+        update();
         processMouseClickEvent();
 
         return;
@@ -99,7 +142,12 @@ void FloatButton::mouseReleaseEvent(QMouseEvent *event) {
 
     if (isFloatButtonMoved()) {
         processMouseReleaseEvent();
+        return;
     }
+
+    pressed_ = false;
+    hovered_ = rect().contains(event->pos());
+    update();
 }
 
 void FloatButton::updateManhattonLength(QMouseEvent *event) {
@@ -127,45 +175,65 @@ void FloatButton::processMouseMoveEvent(QMouseEvent *event) {
 void FloatButton::mouseMoveEvent(QMouseEvent *event) {
     if (event->buttons() & Qt::LeftButton) {
         processMouseMoveEvent(event);
+    } else {
+        hovered_ = rect().contains(event->pos());
+        update();
     }
     QPushButton::mouseMoveEvent(event);
 }
 
 void FloatButton::paintEvent(QPaintEvent *event) {
+    Q_UNUSED(event);
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    painter.setBrush(QBrush(Qt::transparent));
-    painter.setPen(Qt::transparent);
+    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.fillRect(rect(), Qt::transparent);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
-    QRect rect = this->rect();
-    rect.setWidth(rect.width());
-    rect.setHeight(rect.height());
+    const QIcon *icon = &defaultIcon_;
+    if (pressed_ && !pressedIcon_.isNull()) {
+        icon = &pressedIcon_;
+    } else if (hovered_ && !hoveredIcon_.isNull()) {
+        icon = &hoveredIcon_;
+    }
 
-    painter.drawEllipse(rect);
-
-    QPushButton::paintEvent(event);
+    if (!icon->isNull()) {
+        const QRect iconRect = rect().adjusted(1, 1, -1, -1);
+        icon->paint(&painter, iconRect, Qt::AlignCenter,
+                    isEnabled() ? QIcon::Normal : QIcon::Disabled);
+    }
 }
 
 void FloatButton::updateThemeStyle(const QString &themeColor) {
     const QString themePrefix = QString(":/img/%1/").arg(themeColor);
-    const QString defaultIcon = themePrefix + "floatbuttondefault.svg";
-    const QString hoveredIcon = themePrefix + "floatbuttonhovered.svg";
-    const QString pressedIcon = themePrefix + "floatbuttonpressed.svg";
-
-    setStyleSheet(QString("QPushButton{border-image: url(%1);}"
-                          "QPushButton:hover{border-image: url(%2);}"
-                          "QPushButton:pressed{border-image: url(%3);}")
-                      .arg(defaultIcon, hoveredIcon, pressedIcon));
+    defaultIcon_ = QIcon(themePrefix + "floatbuttondefault.svg");
+    hoveredIcon_ = QIcon(themePrefix + "floatbuttonhovered.svg");
+    pressedIcon_ = QIcon(themePrefix + "floatbuttonpressed.svg");
+    update();
 }
 
 void FloatButton::initAttributes() {
     setWindowTitle("kylin-virtual-keyboard-float-button");
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_AlwaysShowToolTips, true);
+    setAttribute(Qt::WA_ShowWithoutActivating, true);
+    setAttribute(Qt::WA_Hover, true);
+    setAttribute(Qt::WA_NoSystemBackground, true);
+    setAutoFillBackground(false);
     setToolTip(tr("Click to show virtual keyboard"));
+    setFocusPolicy(Qt::NoFocus);
+    setFlat(true);
 
-    setWindowFlags(Qt::FramelessWindowHint | Qt::BypassWindowManagerHint |
-                   Qt::Tool);
+    Qt::WindowFlags flags = Qt::FramelessWindowHint;
+    if (getDesktopType() == DesktopType::WAYLAND) {
+        flags |= Qt::Window | Qt::WindowStaysOnTopHint |
+                 Qt::WindowDoesNotAcceptFocus;
+    } else {
+        flags |= Qt::Tool;
+        flags |= Qt::BypassWindowManagerHint;
+    }
+    setWindowFlags(flags);
+    setStyleSheet(QStringLiteral("QPushButton{background:transparent;border:none;}"));
 
     // 主题框架默认禁用了move消息，因此，QPushButton需要禁用主题框架
     setProperty("useStyleWindowManager", QVariant(false));
@@ -196,7 +264,8 @@ void FloatButton::startClickTimer() {
 }
 
 void FloatButton::stopClickTimer() {
-    if (clickTimer_ == nullptr) {
+    if (clickTimer_ != nullptr) {
+        clickTimer_->stop();
         clickTimer_.reset();
     }
 }

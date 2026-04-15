@@ -108,6 +108,7 @@ void VirtualKeyboardView::updateGeometry() {
 
     QRect geo = geometry();
     view_->setGeometry(geo);
+    updateWlrootsLayerShellPlacement();
     emit positionChanged(geo.topLeft());
     emit sizeChanged();
     emitContentGeometrySignals();
@@ -133,6 +134,7 @@ void VirtualKeyboardView::move(int x, int y) {
     KVKBD_DEBUG("position:{},{}", x, y);
     view_->setX(x);
     view_->setY(y);
+    updateWlrootsLayerShellPlacement();
     emit positionChanged(QPoint(x, y));
 }
 
@@ -143,6 +145,7 @@ void VirtualKeyboardView::resize(int width, int height) {
     }
 
     view_->resize(width, height);
+    updateWlrootsLayerShellPlacement();
     emitContentGeometrySignals();
     emit sizeChanged();
 }
@@ -195,19 +198,12 @@ void VirtualKeyboardView::initView() {
 #ifdef HAVE_LAYER_SHELL
         auto *layerWindow = LayerShellQt::Window::get(view_.get());
         if (layerWindow) {
-            // 置于所有普通窗口之上
-            layerWindow->setLayer(LayerShellQt::Window::LayerTop);
-            // 锚定到屏幕底部，左右延伸撑满
-            // 显式构造 Anchors（QFlags）避免 operator| 返回 int 的类型歧义
-            LayerShellQt::Window::Anchors anchors(LayerShellQt::Window::AnchorBottom);
-            anchors |= LayerShellQt::Window::AnchorLeft;
-            anchors |= LayerShellQt::Window::AnchorRight;
-            layerWindow->setAnchors(anchors);
             // 初始不占用 exclusive zone，显示时由 WorkspaceAdjuster 设置
             layerWindow->setExclusiveZone(0);
             // 不抢占键盘焦点，保持输入法焦点在目标应用
             layerWindow->setKeyboardInteractivity(
                 LayerShellQt::Window::KeyboardInteractivityNone);
+            updateWlrootsLayerShellPlacement();
             KVKBD_INFO("layer-shell window configured for wlroots compositor.");
         } else {
             KVKBD_WARN("failed to get LayerShellQt::Window, falling back to basic flags.");
@@ -243,8 +239,9 @@ void VirtualKeyboardView::pressed() {
         return;
     }
     raiseWindowIfNecessary();
-    // UKUI Wayland 和 wlroots（Sway）均使用系统级拖动
-    if (getDesktopType() == DesktopType::WAYLAND) {
+    // UKUI Wayland 使用系统级拖动，wlroots 浮动模式改为应用侧更新几何。
+    if (getDesktopEnvironment() == DesktopEnvironment::UKUI &&
+        getDesktopType() == DesktopType::WAYLAND) {
         KVKBD_DEBUG("moveStart (Wayland)");
         view_->startSystemMove();
     }
@@ -274,6 +271,39 @@ void VirtualKeyboardView::raiseWindowIfNecessary() {
     }
 
     view_->raise();
+}
+
+void VirtualKeyboardView::updateWlrootsLayerShellPlacement() {
+    if (view_ == nullptr || !isWlrootsWayland()) {
+        return;
+    }
+
+#ifdef HAVE_LAYER_SHELL
+    auto *layerWindow = LayerShellQt::Window::get(view_.get());
+    if (layerWindow == nullptr) {
+        return;
+    }
+
+    if (isFloatMode()) {
+        layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
+        LayerShellQt::Window::Anchors anchors(LayerShellQt::Window::AnchorTop);
+        anchors |= LayerShellQt::Window::AnchorLeft;
+        layerWindow->setAnchors(anchors);
+        layerWindow->setExclusiveZone(0);
+        const QRect screenRect = screenGeometry();
+        const QRect geo = view_->geometry();
+        layerWindow->setMargins(QMargins(geo.x() - screenRect.x(),
+                                         geo.y() - screenRect.y(), 0, 0));
+    } else {
+        layerWindow->setLayer(LayerShellQt::Window::LayerTop);
+        LayerShellQt::Window::Anchors anchors(
+            LayerShellQt::Window::AnchorBottom);
+        anchors |= LayerShellQt::Window::AnchorLeft;
+        anchors |= LayerShellQt::Window::AnchorRight;
+        layerWindow->setAnchors(anchors);
+        layerWindow->setMargins(QMargins());
+    }
+#endif
 }
 
 QRect VirtualKeyboardView::calculateInitialGeometry() {

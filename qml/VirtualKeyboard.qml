@@ -37,7 +37,12 @@ Rectangle {
     property string currentIM: "|||"
     //大小相关
     //设置默认值，防止报错，fontSize为0时会报错，加载qml文件时height为0，会导致fontSize为0
-    property real cardinalNumber: height == 0 ? 8 : height / (isFloatMode ? 68.5 : 64)
+    property real floatWidthUnit: width == 0 ? 8 : width / 1458
+    property real floatHeightUnit: height == 0 ? 8 : height / 548
+    property real expansionHeightUnit: height == 0 ? 8 : height / 64
+    property real cardinalNumber: isFloatMode
+                                  ? Math.min(floatWidthUnit, floatHeightUnit) * 8
+                                  : expansionHeightUnit
     property int dragBarHeight: cardinalNumber * 4.5
     property int preeditHeight: cardinalNumber * 5
     property int toolAndCandidateHeight: cardinalNumber * 8
@@ -267,8 +272,8 @@ Rectangle {
         color: "transparent"
         radius: virtualKeyboard.radius
         anchors.horizontalCenter: parent.horizontalCenter
-        width: view.contentWidth
-        height: view.contentHeight
+        width: parent.width
+        height: parent.height
 
         DragBar {
             id: dragBar

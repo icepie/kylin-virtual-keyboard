@@ -46,11 +46,8 @@ endif()
 
 find_package(PkgConfig REQUIRED)
 if (QT_VERSION_MAJOR EQUAL 6)
-    # Qt6: 先尝试 gsettings-qt6，再回退到 gsettings-qt（可能为 Qt5 版本）
-    pkg_check_modules(GSettings_QT QUIET IMPORTED_TARGET gsettings-qt6)
-    if (NOT GSettings_QT_FOUND)
-        pkg_check_modules(GSettings_QT REQUIRED IMPORTED_TARGET gsettings-qt)
-    endif()
+    # Qt6 构建必须链接 Qt6 版本的 gsettings-qt，避免在同一进程混入 Qt5Core。
+    pkg_check_modules(GSettings_QT REQUIRED IMPORTED_TARGET gsettings-qt6)
 else()
     pkg_check_modules(GSettings_QT REQUIRED IMPORTED_TARGET gsettings-qt)
 endif()
