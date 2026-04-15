@@ -141,6 +141,9 @@ void VirtualKeyboardManager::initWorkspaceAdjuster() {
     } else if (isWlrootsWayland()) {
         // Sway / 其他 wlroots 合成器：使用 wlr-layer-shell 协议
         workspaceAdjuster_.reset(new LayerShellWorkspaceAdjuster());
+    } else if (getDesktopType() == DesktopType::WAYLAND) {
+        // 其他 Wayland 合成器上不使用 X11 的工作区调整接口，避免误调用 X11 能力。
+        workspaceAdjuster_.reset();
     } else {
         // X11 环境回退
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)

@@ -17,6 +17,7 @@
 
 #include <csignal>
 #include <iostream>
+#include <QByteArray>
 #include <QLocale>
 #include <QTranslator>
 
@@ -27,16 +28,36 @@
 #include "log.h"
 #include "messagehandler.h"
 #include "qtsingleapplication/src/QtSingleApplication"
+#include "utils.h"
 #include "virtualkeyboard/virtualkeyboardmanager.h"
 #include "virtualkeyboardentry/virtualkeyboardentrymanager.h"
 
 const QString APP_ID = "kylin-virtual-keyboard";
 const QString APP_VERSION = "4.20.1.0";
 
+static void setupQtPlatformForSession() {
+    if (!qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
+        return;
+    }
+
+    switch (getDesktopType()) {
+    case DesktopType::WAYLAND:
+        qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("wayland"));
+        break;
+    case DesktopType::X11:
+        qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("xcb"));
+        break;
+    case DesktopType::UNKNOWN:
+        break;
+    }
+}
+
 int main(int argc, char *argv[]) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QtSingleApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
+
+    setupQtPlatformForSession();
 
     QtSingleApplication app(APP_ID, argc, argv);
     QtSingleApplication::setApplicationName(APP_ID);

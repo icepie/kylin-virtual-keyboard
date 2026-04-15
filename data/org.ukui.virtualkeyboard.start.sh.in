@@ -1,15 +1,9 @@
 #!/bin/bash
-# The input method requires the use of the xcb platform environment in the wayland environment
-# However, it cannot affect the entire system environment
-# Exception: In UKUI + Wayland environment, use ukui wayland support
 
-desktop_env=$(echo "$XDG_CURRENT_DESKTOP" | tr '[:upper:]' '[:lower:]')
 session_type=$(echo "$XDG_SESSION_TYPE" | tr '[:upper:]' '[:lower:]')
 
-if [[ "$desktop_env" == *"ukui"* ]] && [[ "$session_type" == "wayland" ]]; then
-    exec @CMAKE_INSTALL_FULL_BINDIR@/kylin-virtual-keyboard
-else
+if [[ "$session_type" == "x11" ]] && [[ -z "$QT_QPA_PLATFORM" ]]; then
     export QT_QPA_PLATFORM=xcb
-    exec @CMAKE_INSTALL_FULL_BINDIR@/kylin-virtual-keyboard
-    unset QT_QPA_PLATFORM
 fi
+
+exec @CMAKE_INSTALL_FULL_BINDIR@/kylin-virtual-keyboard
