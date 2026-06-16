@@ -26,7 +26,7 @@ BaseKey {
     property color hoverColor: virtualKeyboard.charKeyHoverColor
 
     function sendKeyEvent(isRelease) {
-        var keysym = Utils.getKeysymByKeyLabel(keyLabel.text)
+        var keysym = Utils.getKeysymByKeyLabel(inputText)
         var modifierKeyState = Utils.getModifierKeyStates()
         virtualKeyboard.processKeyEvent(keysym, keycode, modifierKeyState, isRelease, Date())
     }

@@ -44,7 +44,7 @@ class FloatButtonManager : public QObject {
 
 public:
     FloatButtonManager(
-        const VirtualKeyboardManager &virtualKeyboardManager,
+        VirtualKeyboardManager &virtualKeyboardManager,
         const FcitxVirtualKeyboardService &fcitxVirtualKeyboardService,
         LocalSettings &floatButtonSettings, ThemeWatcher &themeWatcher);
     ~FloatButtonManager() override = default;
@@ -86,7 +86,7 @@ private:
 private:
     bool floatButtonEnabled_ = false;
 
-    const VirtualKeyboardManager &virtualKeyboardManager_;
+    VirtualKeyboardManager &virtualKeyboardManager_;
     const FcitxVirtualKeyboardService &fcitxVirtualKeyboardService_;
 
     LocalSettings &floatButtonSettings_;

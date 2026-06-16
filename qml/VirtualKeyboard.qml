@@ -133,6 +133,7 @@ Rectangle {
     property string layout: "classic"
     property bool isCurrentIMListVisible: false
     property bool isShiftKeyLongPressed: shiftState === "LONG_PRESSED" || shiftState === "OPEN_LONG_PRESSED"
+    property bool isTibetanKeyboardLayout: uniqueName.indexOf("keyboard-cn-tib") !== -1 || currentIM.indexOf("keyboard-cn-tib") !== -1
 
     //内部使用
     signal showToolbar()
@@ -165,6 +166,32 @@ Rectangle {
 
     function flipPlacementMode() {
         manager.flipPlacementMode();
+    }
+
+    function tibetanKeyLabel(label) {
+        if (!isTibetanKeyboardLayout)
+            return label;
+
+        var normalLabels = {
+            "`": "ཨ", "1": "༡", "2": "༢", "3": "༣", "4": "༤", "5": "༥", "6": "༦", "7": "༧", "8": "༨", "9": "༩", "0": "༠", "-": "ཧ", "=": "ཝ",
+            "q": "ཅ", "w": "ཆ", "e": "ེ", "r": "ར", "t": "ཏ", "y": "ཡ", "u": "ུ", "i": "ི", "o": "ོ", "p": "ཕ", "[": "ཙ", "]": "ཚ", "\\": "ཛ",
+            "a": "འ", "s": "ས", "d": "ད", "f": "བ", "g": "ང", "h": "མ", "j": "་", "k": "ག", "l": "ལ", ";": "ཞ", "'": "།",
+            "z": "ཟ", "x": "ཤ", "c": "ཀ", "v": "ཁ", "b": "པ", "n": "ན", "m": "AltGr", ", ": "ཐ", ".": "ཇ", "/": "ཉ"
+        };
+        return normalLabels[label] || label;
+    }
+
+    function tibetanShiftedKeyLabel(label) {
+        if (!isTibetanKeyboardLayout)
+            return label;
+
+        var shiftedLabels = {
+            "~": "༁", "!": "༪", "@": "༫", "#": "༬", "$": "༭", "%": "༮", "^": "༯", "&": "༰", "*": "༱", "(": "༲", ")": "༳", "_": "༼", "+": "༽",
+            "Q": "༕", "W": "༖", "E": "༗", "R": "ྼ", "T": "ཊ", "Y": "ྻ", "U": "༘", "I": "༙", "O": "༚", "P": "༛", "{": "༜", "}": "༝", "|": "༞",
+            "A": "ཱ", "S": "༟", "D": "ཌ", "F": "༾", "G": "༿", "H": "࿏", "J": "༂", "K": "༃", "L": "༆", ":": "༇", "\"": "༸",
+            "Z": "༴", "X": "ཥ", "C": "ཀྵ", "V": "྇", "B": "྆", "N": "ཎ", "M": "AltGr", "<": "ཋ", ">": "༺", "?": "༻"
+        };
+        return shiftedLabels[label] || label;
     }
 
     function pressed() {

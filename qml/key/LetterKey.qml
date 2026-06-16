@@ -18,6 +18,7 @@
 import QtQuick 2.0
 
 CharKey {
+    id: letterKey
 
     state: virtualKeyboard.letterState
 
@@ -26,7 +27,11 @@ CharKey {
             name: "NORMAL"
             PropertyChanges {
                 target: keyLabel
-                text: label
+                text: virtualKeyboard.tibetanKeyLabel(label)
+            }
+            PropertyChanges {
+                target: letterKey
+                inputText: label
             }
         },
 
@@ -34,7 +39,11 @@ CharKey {
             name: "SHIFT"
             PropertyChanges {
                 target: keyLabel
-                text: shiftedText
+                text: virtualKeyboard.tibetanShiftedKeyLabel(shiftedText)
+            }
+            PropertyChanges {
+                target: letterKey
+                inputText: shiftedText
             }
         }
     ]

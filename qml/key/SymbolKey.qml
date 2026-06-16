@@ -19,6 +19,8 @@ import QtQuick 2.0
 import QtQuick.Controls 2.0
 
 CharKey {
+    id: symbolKey
+
     property alias shiftLabel: shiftLabel_
 
     state: virtualKeyboard.symbolState
@@ -28,12 +30,17 @@ CharKey {
 
             PropertyChanges {
                 target: keyLabel
-                text: label
+                text: virtualKeyboard.tibetanKeyLabel(label)
+            }
+
+            PropertyChanges {
+                target: symbolKey
+                inputText: label
             }
 
             PropertyChanges {
                 target: shiftLabel
-                text: shiftedText
+                text: virtualKeyboard.tibetanShiftedKeyLabel(shiftedText)
             }
 
         },
@@ -42,7 +49,12 @@ CharKey {
 
             PropertyChanges {
                 target: keyLabel
-                text: shiftedText
+                text: virtualKeyboard.tibetanShiftedKeyLabel(shiftedText)
+            }
+
+            PropertyChanges {
+                target: symbolKey
+                inputText: shiftedText
             }
 
             PropertyChanges {
@@ -56,7 +68,7 @@ CharKey {
     Label {
         id: shiftLabel_
 
-        text: shiftedText
+        text: virtualKeyboard.tibetanShiftedKeyLabel(shiftedText)
         color: virtualKeyboard.fontSecondaryColor
         font.pointSize: virtualKeyboard.shiftFontSize
         font.weight: Font.Light

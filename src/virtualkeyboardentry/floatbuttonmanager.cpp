@@ -32,7 +32,7 @@
 #include "virtualkeyboardentry/floatbuttonstrategy.h"
 
 FloatButtonManager::FloatButtonManager(
-    const VirtualKeyboardManager &virtualKeyboardManager,
+    VirtualKeyboardManager &virtualKeyboardManager,
     const FcitxVirtualKeyboardService &fcitxVirtualKeyboardService,
     LocalSettings &floatButtonSettings, ThemeWatcher &themeWatcher)
     : virtualKeyboardManager_(virtualKeyboardManager),
@@ -177,8 +177,10 @@ void FloatButtonManager::hideFloatButton() {
 }
 
 void FloatButtonManager::createFloatButton() {
-    floatButton_.reset(new FloatButton(
-        [this]() { fcitxVirtualKeyboardService_.showVirtualKeyboard(); }));
+    floatButton_.reset(new FloatButton([this]() {
+        KVKBD_INFO("float button clicked, show virtual keyboard directly.");
+        virtualKeyboardManager_.showVirtualKeyboard();
+    }));
     floatButton_->updateThemeStyle(themeWatcher_.currentThemeColor());
 }
 

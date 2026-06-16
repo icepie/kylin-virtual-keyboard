@@ -22,6 +22,7 @@ import VirtualKeyboard.ShadowBorderItem 1.0
 ToolButton {
     property int keycode
     property string label: ""
+    property string inputText: label
     property real fontSize: virtualKeyboard.fontSize
     property alias keyLabel: keyLabel_
     property alias keyBackground: keyBackground_
@@ -48,7 +49,7 @@ ToolButton {
     Label {
         id: keyLabel_
 
-        text: label
+        text: virtualKeyboard.tibetanKeyLabel(label)
         color: virtualKeyboard.fontPrimaryColor
         font.pointSize: fontSize
         font.weight: Font.Light
