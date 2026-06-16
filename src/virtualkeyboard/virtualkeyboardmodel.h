@@ -74,6 +74,9 @@ signals:
     void backendConnectionDisconnected();
 
 private slots:
+    void syncFcitxInputMethodState();
+
+private slots:
     void backendServiceRegistered(const QString &serviceName);
     void backendServiceUnregistered(const QString &serviceName);
 

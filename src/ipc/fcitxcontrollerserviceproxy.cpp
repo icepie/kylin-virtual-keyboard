@@ -33,15 +33,6 @@ QDBusPendingReply<QString> FcitxControllerServiceProxy::CurrentInputMethod() {
                                      argumentList);
 }
 
-QDBusPendingReply<QString, QString, QString, QVariantMap,
-                  FcitxQtFullInputMethodEntryList>
-FcitxControllerServiceProxy::FullInputMethodGroupInfo(
-    const QString &imGroupName) {
-    QList<QVariant> argumentList;
-    argumentList << QVariant::fromValue(imGroupName);
-    return asyncCallWithArgumentList(QStringLiteral("FullInputMethodGroupInfo"),
-                                     argumentList);
-}
 
 QDBusPendingReply<>
 FcitxControllerServiceProxy::SetCurrentIM(const QString &imName) {

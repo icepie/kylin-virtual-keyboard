@@ -31,9 +31,6 @@ public:
 
 public:
     QDBusPendingReply<QString> CurrentInputMethod();
-    QDBusPendingReply<QString, QString, QString, QVariantMap,
-                      FcitxQtFullInputMethodEntryList>
-    FullInputMethodGroupInfo(const QString &imGroupName);
     QDBusPendingReply<> SetCurrentIM(const QString &imName);
 };
 

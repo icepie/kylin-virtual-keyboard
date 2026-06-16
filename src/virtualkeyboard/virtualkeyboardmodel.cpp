@@ -18,6 +18,11 @@
 #include "virtualkeyboardmodel.h"
 
 #include <QProcess>
+#include <QTimer>
+#include <QFile>
+#include <QRegularExpression>
+#include <QTextStream>
+#include <QDir>
 #include <QDBusConnection>
 #include <QDBusMetaType>
 #include <QDBusPendingReply>
@@ -28,6 +33,8 @@ VirtualKeyboardModel::VirtualKeyboardModel(QObject *parent) : QObject(parent) {
     initFcitx5Controller();
     initUkuiMenuServiceProxy();
     initDBusServiceWatcher();
+
+    QTimer::singleShot(0, this, &VirtualKeyboardModel::syncFcitxInputMethodState);
 }
 
 void VirtualKeyboardModel::updateCandidateArea(
@@ -41,7 +48,14 @@ void VirtualKeyboardModel::selectCandidate(int index) {
 }
 
 void VirtualKeyboardModel::setCurrentIM(const QString &imName) {
-    fcitx5Controller_->SetCurrentIM(imName);
+    auto reply = fcitx5Controller_->SetCurrentIM(imName);
+    reply.waitForFinished();
+    if (!reply.isValid()) {
+        KVKBD_WARN("SetCurrentIM failed:{}", reply.error().message().toStdString());
+        return;
+    }
+
+    syncUniqueName();
 }
 
 void VirtualKeyboardModel::processKeyEvent(int keysym, int keycode, int state,
@@ -255,6 +269,11 @@ QString VirtualKeyboardModel::keysymToWaylandKeyName(int keysym) {
 void VirtualKeyboardModel::initFcitx5Controller() {
     registerKvkbdFcitxQtDBusTypes();
     fcitx5Controller_.reset(new FcitxControllerServiceProxy(this));
+    QDBusConnection::sessionBus().connect(
+        QStringLiteral("org.fcitx.Fcitx5"), QStringLiteral("/controller"),
+        QStringLiteral("org.fcitx.Fcitx.Controller1"),
+        QStringLiteral("InputMethodGroupsChanged"), this,
+        SLOT(syncFcitxInputMethodState()));
 }
 
 void VirtualKeyboardModel::initUkuiMenuServiceProxy() {
@@ -287,8 +306,7 @@ void VirtualKeyboardModel::backendServiceRegistered(
     }
     initVirtualKeyboardBackendInterface();
 
-    syncCurrentIMList();
-    syncUniqueName();
+    syncFcitxInputMethodState();
 }
 
 void VirtualKeyboardModel::backendServiceUnregistered(
@@ -312,6 +330,11 @@ void VirtualKeyboardModel::setUniqueName(const QString &uniqueName) {
     uniqueName_ = uniqueName;
 
     emit uniqueNameChanged();
+}
+
+void VirtualKeyboardModel::syncFcitxInputMethodState() {
+    syncCurrentIMList();
+    syncUniqueName();
 }
 
 void VirtualKeyboardModel::syncUniqueName() {
@@ -356,19 +379,48 @@ void VirtualKeyboardModel::setPreeditText(const QString &preeditText) {
 }
 
 void VirtualKeyboardModel::syncCurrentIMList() {
-    auto reply = fcitx5Controller_->FullInputMethodGroupInfo("");
-    reply.waitForFinished();
-    if (!reply.isValid()) {
-        KVKBD_WARN("reply error:{}", reply.error().message().toStdString());
-        return;
+    QStringList inputMethodNames;
+    QFile profileFile(QDir::homePath() + QStringLiteral("/.config/fcitx5/profile"));
+    if (profileFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream stream(&profileFile);
+        const QRegularExpression namePattern(QStringLiteral("^Name=(.+)$"));
+        while (!stream.atEnd()) {
+            const QString line = stream.readLine().trimmed();
+            const auto match = namePattern.match(line);
+            if (match.hasMatch()) {
+                const QString name = match.captured(1).trimmed();
+                if (name.startsWith(QStringLiteral("keyboard-")) &&
+                    !inputMethodNames.contains(name)) {
+                    inputMethodNames.append(name);
+                }
+            }
+        }
+    }
+
+    if (inputMethodNames.isEmpty()) {
+        inputMethodNames << QStringLiteral("keyboard-us")
+                         << QStringLiteral("keyboard-cn-tib")
+                         << QStringLiteral("keyboard-cn-tib_asciinum");
     }
 
     QStringList stringList;
-    auto inputMethodEntryList = reply.argumentAt<4>();
-    for (const auto &inputMethodEntry : inputMethodEntryList) {
-        stringList.append(
-            inputMethodEntry.uniqueName() + "|" + inputMethodEntry.name() +
-            "|" + inputMethodEntry.label() + "|" + inputMethodEntry.icon());
+    for (const auto &uniqueName : inputMethodNames) {
+        QString localName = uniqueName;
+        QString label;
+        QString icon = QStringLiteral("input-keyboard");
+
+        if (uniqueName == QStringLiteral("keyboard-us")) {
+            localName = QStringLiteral("English");
+            label = QStringLiteral("us");
+        } else if (uniqueName == QStringLiteral("keyboard-cn-tib")) {
+            localName = QStringLiteral("藏语");
+            label = QStringLiteral("bo");
+        } else if (uniqueName == QStringLiteral("keyboard-cn-tib_asciinum")) {
+            localName = QStringLiteral("藏语 ASCII 数字");
+            label = QStringLiteral("bo");
+        }
+
+        stringList.append(uniqueName + "|" + localName + "|" + label + "|" + icon);
     }
 
     setCurrentIMList(QVariant(stringList));
