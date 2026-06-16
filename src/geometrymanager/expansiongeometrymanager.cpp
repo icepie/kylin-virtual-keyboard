@@ -30,7 +30,7 @@ int ExpansionGeometryManager::calculateViewWidth() const {
 int ExpansionGeometryManager::calculateViewHeight() const {
     QRect screenGeo = ScreenWatcher::getInstance().getOptimalScreenGeometry(
         GeometryManager::currentPosition_);
-    return screenGeo.height() * viewHeightRatio_;
+    return std::max(screenGeo.width(), screenGeo.height()) * viewHeightRatio_;
 }
 
 QPoint ExpansionGeometryManager::calculateViewPosition() const {

@@ -299,8 +299,8 @@ Rectangle {
         color: "transparent"
         radius: virtualKeyboard.radius
         anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width
-        height: parent.height
+        width: view.contentWidth
+        height: view.contentHeight
 
         DragBar {
             id: dragBar
