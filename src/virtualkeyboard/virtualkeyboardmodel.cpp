@@ -112,18 +112,18 @@ bool VirtualKeyboardModel::shouldBypassFcitxForWaylandTextInput() const {
 
 
 bool VirtualKeyboardModel::sendX11Input(int keycode, bool isRelease) const {
-    const QString keyName = keycodeToX11KeyName(keycode);
-    if (keyName.isEmpty()) {
+    if (keycode <= 0) {
         KVKBD_WARN("unsupported x11 fallback keycode:{}", keycode);
         return false;
     }
 
     const QString action = isRelease ? QStringLiteral("keyup") : QStringLiteral("keydown");
+    const QString keycodeArgument = QStringLiteral("keycode %1").arg(keycode);
     const int exitCode = QProcess::execute(QStringLiteral("xdotool"),
-                                           QStringList() << action << keyName);
+                                           QStringList() << action << keycodeArgument);
     if (exitCode != 0) {
-        KVKBD_WARN("xdotool failed with exit code:{}, action:{}, key:{}",
-                   exitCode, action.toStdString(), keyName.toStdString());
+        KVKBD_WARN("xdotool failed with exit code:{}, action:{}, keycode:{}",
+                   exitCode, action.toStdString(), keycode);
         return false;
     }
 
