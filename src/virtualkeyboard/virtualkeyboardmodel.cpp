@@ -410,8 +410,8 @@ void VirtualKeyboardModel::syncCurrentIMList() {
         QString icon = QStringLiteral("input-keyboard");
 
         if (uniqueName == QStringLiteral("keyboard-us")) {
-            localName = QStringLiteral("English");
-            label = QStringLiteral("us");
+            localName = QStringLiteral("Wylie");
+            label = QStringLiteral("Wy");
         } else if (uniqueName == QStringLiteral("keyboard-cn-tib")) {
             localName = QStringLiteral("藏语");
             label = QStringLiteral("bo");
