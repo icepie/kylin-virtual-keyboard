@@ -89,7 +89,9 @@ void FloatButton::mousePressEvent(QMouseEvent *event) {
 
         if (getDesktopEnvironment() == DesktopEnvironment::UKUI &&
             getDesktopType() == DesktopType::WAYLAND) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
             windowHandle()->startSystemMove();
+#endif
         }
     }
 

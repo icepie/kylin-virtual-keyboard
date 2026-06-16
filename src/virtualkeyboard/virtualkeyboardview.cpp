@@ -243,7 +243,9 @@ void VirtualKeyboardView::pressed() {
     if (getDesktopEnvironment() == DesktopEnvironment::UKUI &&
         getDesktopType() == DesktopType::WAYLAND) {
         KVKBD_DEBUG("moveStart (Wayland)");
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         view_->startSystemMove();
+#endif
     }
 }
 

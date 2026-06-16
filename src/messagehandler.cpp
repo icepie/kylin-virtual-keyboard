@@ -34,7 +34,7 @@ void MessageHandler::registerCommand(
 
 void MessageHandler::processMessage(const QString &rawMessage,
                                     ResultCallback callback) {
-    QStringList parts = rawMessage.split(' ', Qt::SkipEmptyParts);
+    QStringList parts = rawMessage.split(' ', QString::SkipEmptyParts);
     if (parts.isEmpty()) {
         QString error = "Empty message received";
         KVKBD_WARN(error.toStdString());

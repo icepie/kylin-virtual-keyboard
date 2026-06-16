@@ -16,6 +16,7 @@
  */
 
 #include "ukuimenuserviceproxy.h"
+#include <QDBusPendingCall>
 
 const QString g_ukuiMenuServiceName = "org.ukui.menu";
 const QString g_ukuiMenuServicePath = "/org/ukui/menu";
