@@ -81,6 +81,8 @@ private:
     bool shouldUseDirectWaylandInput(int keysym, int state,
                                      bool isRelease) const;
     bool sendWaylandInput(int keysym) const;
+    bool sendX11Input(int keycode, bool isRelease) const;
+    static QString keycodeToX11KeyName(int keycode);
     bool shouldBypassFcitxForWaylandTextInput() const;
     static QString keysymToWaylandText(int keysym);
     static QString keysymToWaylandKeyName(int keysym);

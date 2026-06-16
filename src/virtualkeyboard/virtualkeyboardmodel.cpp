@@ -58,6 +58,14 @@ void VirtualKeyboardModel::processKeyEvent(int keysym, int keycode, int state,
         return;
     }
 
+    if (!virtualKeyboardBackendInterface_ ||
+        !virtualKeyboardBackendInterface_->isValid()) {
+        KVKBD_WARN("virtual keyboard backend is unavailable, fallback to xdotool. keycode:{}, isRelease:{}",
+                   keycode, isRelease);
+        sendX11Input(keycode, isRelease);
+        return;
+    }
+
     virtualKeyboardBackendInterface_->asyncCall("ProcessKeyEvent", (uint)keysym,
                                                 (uint)keycode, (uint)state,
                                                 isRelease, (uint)time);
@@ -86,6 +94,89 @@ bool VirtualKeyboardModel::shouldUseDirectWaylandInput(int keysym, int state,
 bool VirtualKeyboardModel::shouldBypassFcitxForWaylandTextInput() const {
     // 仅在纯英文键盘输入法下绕过 fcitx5，避免拼音等输入法拿不到预编辑。
     return uniqueName_.isEmpty() || uniqueName_ == QStringLiteral("keyboard-us");
+}
+
+
+bool VirtualKeyboardModel::sendX11Input(int keycode, bool isRelease) const {
+    const QString keyName = keycodeToX11KeyName(keycode);
+    if (keyName.isEmpty()) {
+        KVKBD_WARN("unsupported x11 fallback keycode:{}", keycode);
+        return false;
+    }
+
+    const QString action = isRelease ? QStringLiteral("keyup") : QStringLiteral("keydown");
+    const int exitCode = QProcess::execute(QStringLiteral("xdotool"),
+                                           QStringList() << action << keyName);
+    if (exitCode != 0) {
+        KVKBD_WARN("xdotool failed with exit code:{}, action:{}, key:{}",
+                   exitCode, action.toStdString(), keyName.toStdString());
+        return false;
+    }
+
+    return true;
+}
+
+QString VirtualKeyboardModel::keycodeToX11KeyName(int keycode) {
+    switch (keycode) {
+    case 9: return QStringLiteral("Escape");
+    case 10: return QStringLiteral("1");
+    case 11: return QStringLiteral("2");
+    case 12: return QStringLiteral("3");
+    case 13: return QStringLiteral("4");
+    case 14: return QStringLiteral("5");
+    case 15: return QStringLiteral("6");
+    case 16: return QStringLiteral("7");
+    case 17: return QStringLiteral("8");
+    case 18: return QStringLiteral("9");
+    case 19: return QStringLiteral("0");
+    case 20: return QStringLiteral("minus");
+    case 21: return QStringLiteral("equal");
+    case 22: return QStringLiteral("BackSpace");
+    case 23: return QStringLiteral("Tab");
+    case 24: return QStringLiteral("q");
+    case 25: return QStringLiteral("w");
+    case 26: return QStringLiteral("e");
+    case 27: return QStringLiteral("r");
+    case 28: return QStringLiteral("t");
+    case 29: return QStringLiteral("y");
+    case 30: return QStringLiteral("u");
+    case 31: return QStringLiteral("i");
+    case 32: return QStringLiteral("o");
+    case 33: return QStringLiteral("p");
+    case 34: return QStringLiteral("bracketleft");
+    case 35: return QStringLiteral("bracketright");
+    case 36: return QStringLiteral("Return");
+    case 37: return QStringLiteral("Control_L");
+    case 38: return QStringLiteral("a");
+    case 39: return QStringLiteral("s");
+    case 40: return QStringLiteral("d");
+    case 41: return QStringLiteral("f");
+    case 42: return QStringLiteral("g");
+    case 43: return QStringLiteral("h");
+    case 44: return QStringLiteral("j");
+    case 45: return QStringLiteral("k");
+    case 46: return QStringLiteral("l");
+    case 47: return QStringLiteral("semicolon");
+    case 48: return QStringLiteral("apostrophe");
+    case 49: return QStringLiteral("grave");
+    case 50: return QStringLiteral("Shift_L");
+    case 51: return QStringLiteral("backslash");
+    case 52: return QStringLiteral("z");
+    case 53: return QStringLiteral("x");
+    case 54: return QStringLiteral("c");
+    case 55: return QStringLiteral("v");
+    case 56: return QStringLiteral("b");
+    case 57: return QStringLiteral("n");
+    case 58: return QStringLiteral("m");
+    case 59: return QStringLiteral("comma");
+    case 60: return QStringLiteral("period");
+    case 61: return QStringLiteral("slash");
+    case 62: return QStringLiteral("Shift_R");
+    case 64: return QStringLiteral("Alt_L");
+    case 65: return QStringLiteral("space");
+    case 66: return QStringLiteral("Caps_Lock");
+    default: return QString();
+    }
 }
 
 bool VirtualKeyboardModel::sendWaylandInput(int keysym) const {
