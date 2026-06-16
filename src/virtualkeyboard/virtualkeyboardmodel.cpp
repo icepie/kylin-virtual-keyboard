@@ -48,10 +48,18 @@ void VirtualKeyboardModel::selectCandidate(int index) {
 }
 
 void VirtualKeyboardModel::setCurrentIM(const QString &imName) {
-    auto reply = fcitx5Controller_->SetCurrentIM(imName);
+    const QString fcitxIMName = imName == QStringLiteral("wylie")
+                                  ? QStringLiteral("keyboard-us")
+                                  : imName;
+    auto reply = fcitx5Controller_->SetCurrentIM(fcitxIMName);
     reply.waitForFinished();
     if (!reply.isValid()) {
         KVKBD_WARN("SetCurrentIM failed:{}", reply.error().message().toStdString());
+        return;
+    }
+
+    if (imName == QStringLiteral("wylie")) {
+        setUniqueName(QStringLiteral("wylie"));
         return;
     }
 
@@ -410,8 +418,8 @@ void VirtualKeyboardModel::syncCurrentIMList() {
         QString icon = QStringLiteral("input-keyboard");
 
         if (uniqueName == QStringLiteral("keyboard-us")) {
-            localName = QStringLiteral("Wylie");
-            label = QStringLiteral("Wy");
+            localName = QStringLiteral("English");
+            label = QStringLiteral("en");
         } else if (uniqueName == QStringLiteral("keyboard-cn-tib")) {
             localName = QStringLiteral("藏语");
             label = QStringLiteral("bo");
@@ -421,6 +429,10 @@ void VirtualKeyboardModel::syncCurrentIMList() {
         }
 
         stringList.append(uniqueName + "|" + localName + "|" + label + "|" + icon);
+
+        if (uniqueName == QStringLiteral("keyboard-us")) {
+            stringList.append(QStringLiteral("wylie|Wylie|Wy|input-keyboard"));
+        }
     }
 
     setCurrentIMList(QVariant(stringList));
